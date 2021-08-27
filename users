@@ -1,0 +1,11 @@
+DEFAULT Ldap-Group == "cn=eng,ou=groups,ou=staff,dc=wso2,dc=local"
+        Reply-Message = "You are accepted"
+DEFAULT Auth-Type := PAM
+DEFAULT Framed-Protocol == PPP
+        Framed-Protocol = PPP,
+        Framed-Compression = Van-Jacobson-TCP-IP
+DEFAULT Hint == "CSLIP"
+        Framed-Protocol = SLIP,
+        Framed-Compression = Van-Jacobson-TCP-IP
+DEFAULT Hint == "SLIP"
+        Framed-Protocol = SLIP
