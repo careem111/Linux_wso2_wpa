@@ -1,0 +1,111 @@
+ATTRIBUTE       Google-Password         3000    string
+ATTRIBUTE       User-UUID               3001    string
+root@radius:/etc/freeradius/3.0# grep -v '^\s*$\|^\s*\#' clients.conf 
+client localhost {
+        ipaddr = 127.0.0.1
+        proto = *
+        secret = testing123
+        require_message_authenticator = no
+        nas_type         = other        # localhost isn't usually a NAS...
+        limit {
+                max_connections = 16
+                lifetime = 0
+                idle_timeout = 30
+        }
+}
+client test {
+        ipaddr = 10.128.0.7
+        secret = test123
+}
+client localhost_ipv6 {
+        ipv6addr        = ::1
+        secret          = testing123
+}
+root@radius:/etc/freeradius/3.0# grep -v '^\s*$\|^\s*\#' mods-enabled/ldap
+ldap {
+        server = 'openldap.wso2.local'
+        identity = 'cn=admin,dc=wso2,dc=local'
+        password = asd123
+        base_dn = 'ou=staff,dc=wso2,dc=local'
+        sasl {
+        }
+        update {
+                control:Password-With-Header    += 'userPassword'
+                control:                        += 'radiusControlAttribute'
+                request:                        += 'radiusRequestAttribute'
+                reply:                          += 'radiusReplyAttribute'
+        }
+        user_dn = "LDAP-UserDn"
+        user {
+                base_dn = "ou=staff,dc=wso2,dc=local"
+                filter = "(mail=%{%{Stripped-User-Name}:-%{User-Name}})"
+                sasl {
+                }
+        }
+        group {
+                base_dn = "ou=groups,ou=staff,dc=wso2,dc=local"
+                filter = '(objectClass=GroupOfNames)'
+                membership_filter = "(|(&(objectClass=GroupOfNames)(member=%{control:Ldap-UserDn}))(&(objectClass=GroupOfNames)(member=%{control:Ldap-UserDn})))"
+                membership_attribute = 'member'
+        }
+        profile {
+        }
+        client {
+                base_dn = "${..base_dn}"
+                filter = '(objectClass=radiusClient)'
+                template {
+                }
+                attribute {
+                        ipaddr                          = 'radiusClientIdentifier'
+                        secret                          = 'radiusClientSecret'
+                }
+        }
+        accounting {
+                reference = "%{tolower:type.%{Acct-Status-Type}}"
+                type {
+                        start {
+                                update {
+                                        description := "Online at %S"
+                                }
+                        }
+                        interim-update {
+                                update {
+                                        description := "Last seen at %S"
+                                }
+                        }
+                        stop {
+                                update {
+                                        description := "Offline at %S"
+                                }
+                        }
+                }
+        }
+        post-auth {
+                update {
+                        description := "Authenticated at %S"
+                }
+        }
+        options {
+                chase_referrals = yes
+                rebind = yes
+                res_timeout = 10
+                srv_timelimit = 3
+                net_timeout = 1
+                idle = 60
+                probes = 3
+                interval = 3
+                ldap_debug = 0x0028
+        }
+        tls {
+        }
+        pool {
+                start = ${thread[pool].start_servers}
+                min = ${thread[pool].min_spare_servers}
+                max = ${thread[pool].max_servers}
+                spare = ${thread[pool].max_spare_servers}
+                uses = 0
+                retry_delay = 30
+                lifetime = 0
+                idle_timeout = 60
+        }
+}
